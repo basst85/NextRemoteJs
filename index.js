@@ -26,7 +26,7 @@ const sessionRequestOptions = {
     method: 'POST',
     uri: sessionUrl,
     body: {
-        username: ziggoUsername,
+		username: ziggoUsername,
 		password: ziggoPassword
     },
     json: true
@@ -45,7 +45,6 @@ const getChannels = request({
 		});
 	}
 });
-	
 
 const getSession = async () => {
 	await request(sessionRequestOptions)
@@ -155,12 +154,10 @@ const startMqttClient = async () => {
 	});
 };
 
-
 function switchChannel(channel) {
 	console.log('Switch to', channel);
 	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.pushToTV","source":{"clientId":"' + varClientId + '","friendlyDeviceName":"NodeJs"},"status":{"sourceType":"linear","source":{"channelId":"' + channel + '"},"relativePosition":0,"speed":1}}')
 };
-
 
 function makeId(length) {
 	let result  = '';
