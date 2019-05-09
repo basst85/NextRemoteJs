@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Next remote</title>
+	</head>
+	<body>
+		<h1>Next remote</h1>
+		<br/>
+		<br/>
+		<b>Click on channelbutton to switch to channel</b>
+		<br/>
+		<div id="stationsList" />
+
+		<script>
+			// Get channels
+			fetch('/api/stations')
+				.then(function(response) {
+					return response.json();
+				})
+				.then(function(stations) {
+					for (let s = 0; s < 10; s++) {
+						let stationBtn = document.createElement('button');
+						stationBtn.setAttribute('style', 'width: 100px; height: 100px; padding: 5px; background: url(' + stations[s].images[3].url + ') no-repeat; background-size: 100%;');
+						stationBtn.id = stations[s].serviceId;
+						document.getElementById('stationsList').appendChild(stationBtn); 
+					}
+					
+					document.addEventListener('click', function(e) {
+						if(e.srcElement.nodeName == 'BUTTON'){
+							setChannel(e.srcElement.id);
+						}
+					});
+				});
+
+			function setChannel(channel){
+				// Switch channel
+				fetch('/api', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json; charset=utf-8'},
+					body: JSON.stringify({
+						action: 'pushChannel',
+						channel: channel
+					}),
+					json: true
+				});
+			};	
+		</script>
+	</body>
+</html>	
