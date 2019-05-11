@@ -14,6 +14,6 @@ $ npm install
 - Set Ziggo username and password in index.js
 - Execute script:
 ```shell
-$ npm run
+$ npm start
 ```
 The webinterface will be available via http://localhost:8080 
