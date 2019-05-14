@@ -8,10 +8,16 @@
 		<h1>Next remote</h1>
 		<br/>
 		<br/>
+		<p id="stbStatus"></p>
+		
+		<button id="Power" onCLick="powerKey()">Power</button>
+		<button id="Escape" onCLick="escapeKey()">Back/Escape</button>
+		<br/>
+		<br/>
 		<b>Click on channelbutton to switch to channel</b>
 		<br/>
 		<div id="stationsList" />
-
+		
 		<script>
 			// Get channels
 			fetch('/api/stations')
@@ -27,7 +33,7 @@
 					}
 					
 					document.addEventListener('click', function(e) {
-						if(e.srcElement.nodeName == 'BUTTON'){
+						if(e.srcElement.nodeName == 'BUTTON' && e.srcElement.id.includes("_")){
 							setChannel(e.srcElement.id);
 						}
 					});
@@ -44,7 +50,45 @@
 					}),
 					json: true
 				});
+			};
+			
+			function powerKey(){
+				// Power on/off
+				fetch('/api', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json; charset=utf-8'},
+					body: JSON.stringify({
+						action: 'powerKey'
+					}),
+					json: true
+				});
 			};	
+			
+			function escapeKey(){
+				// Escape key
+				fetch('/api', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json; charset=utf-8'},
+					body: JSON.stringify({
+						action: 'escapeKey'
+					}),
+					json: true
+				});
+			};	
+			
+			function getStatus(){
+				fetch('/api/status')
+					.then(function(response) {
+						return response.json();
+					})
+					.then(function(status) {
+						if(status.setopboxState){
+							document.getElementById("stbStatus").innerHTML = 'Setopbox status: ' + status.setopboxState;
+						}
+					});
+			};
+			
+			setInterval(function(){ getStatus(); }, 1000);
 		</script>
 	</body>
 </html>	

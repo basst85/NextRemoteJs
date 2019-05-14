@@ -5,7 +5,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const server = express();
 const varClientId = makeId(30);
-const stations = [];
 
 const sessionUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/session';
 const jwtUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/tokens/jwt';
@@ -21,6 +20,11 @@ const ziggoPassword = "Your password";
 let mqttUsername;
 let mqttPassword;
 let setopboxId;
+let setopboxState;
+let stations = [];
+let uiStatus;
+let currentChannel;
+let currentChannelId;
 
 const sessionRequestOptions = {
     method: 'POST',
@@ -111,6 +115,9 @@ const startMqttClient = async () => {
 			if(payloadValue.deviceType){
 				if(payloadValue.deviceType == 'STB'){
 					setopboxId = payloadValue.source;
+					setopboxState = payloadValue.state;
+
+					getUiStatus();
 					mqttClient.subscribe(mqttUsername + '/' + varClientId, function (err) {
 						if(err){
 							console.log(err);
@@ -135,8 +142,14 @@ const startMqttClient = async () => {
 			}
 			
 			if(payloadValue.status){
-				let filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
-				console.log('Current channel:', filtered[0].title);
+				console.log(payloadValue.status);
+				if(payloadValue.status.playerState){
+					let filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
+					currentChannelId = uiStatus.status.playerState.source.channelId;
+					currentChannel = filtered[0].title;
+					uiStatus = payloadValue;
+					console.log('Current channel:', filtered[0].title);
+				}
 			}
 		});
 		
@@ -157,6 +170,21 @@ const startMqttClient = async () => {
 function switchChannel(channel) {
 	console.log('Switch to', channel);
 	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.pushToTV","source":{"clientId":"' + varClientId + '","friendlyDeviceName":"NodeJs"},"status":{"sourceType":"linear","source":{"channelId":"' + channel + '"},"relativePosition":0,"speed":1}}')
+};
+
+function powerKey() {
+	console.log('Power on/off');
+	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.KeyEvent","source":"' + varClientId + '","status":{"w3cKey":"Power","eventType":"keyDownUp"}}')
+};
+
+function escapeKey() {
+	console.log('Send escape-key');
+	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.KeyEvent","source":"' + varClientId + '","status":{"w3cKey":"Escape","eventType":"keyDownUp"}}')
+};
+
+function getUiStatus() {
+	console.log('Get UI status');
+	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.getUiStatus","source":"' + varClientId + '"}')
 };
 
 function makeId(length) {
@@ -186,13 +214,37 @@ getSession()
 		server.listen(8080, () => {
 			console.log("Server running on port 8080");
 		});
+		
 		server.get("/", (req, res, next) => {
 			res.sendFile(__dirname + '/index.html');
 		});
+
 		server.post("/api", (req, res, next) => {
-			res.json(["Ok"]);
-			switchChannel(req.body.channel)
+			switch(req.body.action){
+				case 'pushChannel':
+					switchChannel(req.body.channel);
+					break;
+				case 'powerKey':
+					powerKey();
+					break;
+				case 'escapeKey':
+					escapeKey();
+					break;
+				default:
+					res.json({"Status": "Error"});
+					break;
+			}
+			res.json({"Status": "Ok"});
 		});
+
+		server.get("/api/status", (req, res, next) => {
+			if(setopboxState){
+				res.json({"Status": "Ok", "setopboxState": setopboxState, "currentChannel": currentChannel, "currentChannelId": currentChannelId, "rawUiStatus": {uiStatus}});
+			}else{
+				res.json({"Status": "Error"});
+			}
+		});
+
 		server.get("/api/stations", (req, res, next) => {
 			res.json(stations);
 			console.log('Get stations');
