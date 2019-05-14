@@ -17,3 +17,6 @@ $ npm install
 $ npm start
 ```
 The webinterface will be available via http://localhost:8080 
+
+---
+[Buy me a coffee☕](https://www.bunq.me/pay)
