@@ -12,6 +12,7 @@
 		
 		<button id="Power" onCLick="powerKey()">Power</button>
 		<button id="Escape" onCLick="escapeKey()">Back/Escape</button>
+		<button id="Pause" onCLick="pauseKey()">Pause</button>		
 		<br/>
 		<br/>
 		<b>Click on channelbutton to switch to channel</b>
@@ -75,6 +76,18 @@
 					json: true
 				});
 			};	
+
+			function pauseKey(){
+				// Pause key
+				fetch('/api', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json; charset=utf-8'},
+					body: JSON.stringify({
+						action: 'pauseKey'
+					}),
+					json: true
+				});			
+			};
 			
 			function getStatus(){
 				fetch('/api/status')

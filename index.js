@@ -182,6 +182,11 @@ function escapeKey() {
 	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.KeyEvent","source":"' + varClientId + '","status":{"w3cKey":"Escape","eventType":"keyDownUp"}}')
 };
 
+function pauseKey() {
+	console.log('Send pause-key');
+	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.KeyEvent","source":"' + varClientId + '","status":{"w3cKey":"MediaPause","eventType":"keyDownUp"}}')
+};
+
 function getUiStatus() {
 	console.log('Get UI status');
 	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.getUiStatus","source":"' + varClientId + '"}')
@@ -230,6 +235,9 @@ getSession()
 				case 'escapeKey':
 					escapeKey();
 					break;
+				case 'pauseKey':
+					pauseKey();
+					break;					
 				default:
 					res.json({"Status": "Error"});
 					break;
