@@ -9,6 +9,7 @@
 		<br/>
 		<br/>
 		<p id="stbStatus"></p>
+		<p id="stbCurrentChannel"></p>
 		
 		<button id="Power" onCLick="powerKey()">Power</button>
 		<button id="Escape" onCLick="escapeKey()">Back/Escape</button>
@@ -26,7 +27,7 @@
 					return response.json();
 				})
 				.then(function(stations) {
-					for (let s = 0; s < 10; s++) {
+					for (let s = 0; s < 15; s++) {
 						let stationBtn = document.createElement('button');
 						stationBtn.setAttribute('style', 'width: 100px; height: 100px; padding: 5px; background: url(' + stations[s].images[3].url + ') no-repeat; background-size: 100%;');
 						stationBtn.id = stations[s].serviceId;
@@ -97,6 +98,9 @@
 					.then(function(status) {
 						if(status.setopboxState){
 							document.getElementById("stbStatus").innerHTML = 'Setopbox status: ' + status.setopboxState;
+							if(status.currentChannel){
+								document.getElementById("stbCurrentChannel").innerHTML = 'Current channel: ' + status.currentChannel;
+							}
 						}
 					});
 			};
