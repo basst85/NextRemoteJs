@@ -21,6 +21,7 @@ let mqttUsername;
 let mqttPassword;
 let setopboxId;
 let setopboxState;
+let stbDevicesCount = 0;
 let stations = [];
 let uiStatus;
 let currentChannel;
@@ -95,6 +96,8 @@ const startMqttClient = async () => {
 	});
 	
 	mqttClient.on('connect', function () {
+		mqttClient.publish(mqttUsername + '/' + varClientId + '/status', '{"source":"' + varClientId + '","state":"ONLINE_RUNNING","deviceType":"HGO"}');
+		
 		mqttClient.subscribe(mqttUsername, function (err) {
 			if(err){
 				console.log(err);
@@ -102,22 +105,26 @@ const startMqttClient = async () => {
 			}
 		});
 		
-		mqttClient.subscribe(mqttUsername +'/+/status', function (err) {
+		mqttClient.subscribe(mqttUsername + '/+/status', function (err) {
 			if(err){
 				console.log(err);
 				return false;
 			}
 		});
-
+		
 		mqttClient.on('message', function (topic, payload) {
 			let payloadValue = JSON.parse(payload);
 			
 			if(payloadValue.deviceType){
 				if(payloadValue.deviceType == 'STB'){
+					stbDevicesCount++;
 					setopboxId = payloadValue.source;
 					setopboxState = payloadValue.state;
 
-					getUiStatus();
+					if(stbDevicesCount == 1){
+						getUiStatus();
+					}
+					
 					mqttClient.subscribe(mqttUsername + '/' + varClientId, function (err) {
 						if(err){
 							console.log(err);
@@ -142,12 +149,11 @@ const startMqttClient = async () => {
 			}
 			
 			if(payloadValue.status){
-				console.log(payloadValue.status);
 				if(payloadValue.status.playerState){
 					let filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
+					uiStatus = payloadValue;
 					currentChannelId = uiStatus.status.playerState.source.channelId;
 					currentChannel = filtered[0].title;
-					uiStatus = payloadValue;
 					console.log('Current channel:', filtered[0].title);
 				}
 			}
@@ -237,7 +243,10 @@ getSession()
 					break;
 				case 'pauseKey':
 					pauseKey();
-					break;					
+					break;	
+				case 'getUiStatus':
+					getUiStatus();
+					break;											
 				default:
 					res.json({"Status": "Error"});
 					break;
@@ -252,7 +261,7 @@ getSession()
 				res.json({"Status": "Error"});
 			}
 		});
-
+		
 		server.get("/api/stations", (req, res, next) => {
 			res.json(stations);
 			console.log('Get stations');
