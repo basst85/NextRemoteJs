@@ -8,6 +8,14 @@
 		<h1>Next remote</h1>
 		<br/>
 		<br/>
+		<div id="urls"> 
+			<a href="api/status">status</a>
+			<a href="api/uistatus">uistatus</a>
+			<a href="api/stations">stations</a>
+			<a href="api/currentchannel">currentchannel</a>
+			<a href="api/currentprogram">currentprogram</a>
+		</div>		
+		<br/>		
 		<p id="stbStatus"></p>
 		<p id="stbCurrentChannel"></p>
 		
@@ -19,7 +27,7 @@
 		<b>Click on channelbutton to switch to channel</b>
 		<br/>
 		<div id="stationsList" />
-		
+
 		<script>
 			// Get channels
 			fetch('/api/stations')
