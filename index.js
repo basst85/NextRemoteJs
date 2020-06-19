@@ -5,6 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const server = express();
 const varClientId = makeId(30);
+const config = require('./config.json');
 
 const sessionUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/session';
 const jwtUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/tokens/jwt';
@@ -15,8 +16,8 @@ const listingsUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/list
 let mqttClient = {};
 
 // Set Ziggo username and password
-const ziggoUsername = "";
-const ziggoPassword = "";
+const ziggoUsername = config.ziggoUsername;
+const ziggoPassword = config.ziggoPassword;
 
 let mqttUsername;
 let mqttPassword;
@@ -250,8 +251,8 @@ getSession()
 			extended: true
 		})); 
 
-		server.listen(8080, () => {
-			console.log("Server running on port 8080");
+		server.listen(config.webPort, () => {
+			console.log("Server running on port: " + config.webPort);
 		});
 		
 		server.get("/", (req, res, next) => {
