@@ -10,12 +10,13 @@ const sessionUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/sessi
 const jwtUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/tokens/jwt';
 const channelsUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/channels';
 const mqttUrl = 'wss://obomsg.prod.nl.horizon.tv:443/mqtt';
+const listingsUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/listings/';
 
 let mqttClient = {};
 
 // Set Ziggo username and password
-const ziggoUsername = "Your username";
-const ziggoPassword = "Your password";
+const ziggoUsername = "";
+const ziggoPassword = "";
 
 let mqttUsername;
 let mqttPassword;
@@ -26,6 +27,8 @@ let stations = [];
 let uiStatus;
 let currentChannel;
 let currentChannelId;
+let filtered;
+let listingsPath;
 
 const sessionRequestOptions = {
     method: 'POST',
@@ -148,15 +151,40 @@ const startMqttClient = async () => {
 				}
 			}
 			
+			//console.log(payloadValue);
 			if(payloadValue.status){
-				if(payloadValue.status.playerState){
-					let filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
-					uiStatus = payloadValue;
-					currentChannelId = uiStatus.status.playerState.source.channelId;
-					currentChannel = filtered[0].title;
-					console.log('Current channel:', filtered[0].title);
+				if(payloadValue.status.uiStatus === "mainUI"){
+					if(payloadValue.status.playerState.sourceType === "linear"){
+						filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
+						uiStatus = payloadValue;
+						currentChannelId = uiStatus.status.playerState.source.channelId;
+						currentChannel = filtered[0].title;
+						LocationId = filtered[0].LocationId;
+						crid = payloadValue.status.playerState.source.eventId;
+						listingsPath = listingsUrl + crid + '?byLocationId=' + LocationId;
+						
+						console.log('Current channel:', filtered[0].title);
+					}
+					else if(payloadValue.status.playerState.sourceType === "replay"){
+						uiStatus = payloadValue;
+					}
+					else if(payloadValue.status.playerState.sourceType === "VOD"){
+						uiStatus = payloadValue;
+					}	
+					else if(payloadValue.status.playerState.sourceType === "nDVR"){
+						uiStatus = payloadValue;
+					}		
+					else if(payloadValue.status.playerState.sourceType === "reviewbuffer"){
+						uiStatus = payloadValue;
+					}						
 				}
+				else if(payloadValue.status.uiStatus === "apps"){
+					
+				}				
+				
 			}
+
+			
 		});
 		
 		mqttClient.on('error', function(err) {
@@ -266,5 +294,30 @@ getSession()
 			res.json(stations);
 			console.log('Get stations');
 		});
+
+		server.get("/api/currentchannel", (req, res, next) => {
+			res.json(filtered);
+			console.log('Get Current Channel');
+		});	
+
+		server.get("/api/currentprogram", (req, res, next) => {		
 		
+			request({
+				url: listingsPath,
+				json: true
+			}, function (error, response, body) {
+			  if (!error && response.statusCode == 200) {
+				 currentProgram = body;
+				 res.json(currentProgram);
+			  }
+			});			
+			
+			console.log('Get currentprogram');
+		})	
+		
+		server.get("/api/uistatus", (req, res, next) => {
+			res.json(uiStatus);
+			console.log('Get uiStatus');
+		})		
+				
 	});
