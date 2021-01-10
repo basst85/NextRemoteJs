@@ -7,11 +7,16 @@ const server = express();
 const varClientId = makeId(30);
 const config = require('./config.json');
 
-const sessionUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/session';
-const jwtUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/tokens/jwt';
-const channelsUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/channels';
+const baseUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web';
+const sessionUrl = baseUrl + '/session';
+const jwtUrl = baseUrl + '/tokens/jwt';
+const channelsUrl = baseUrl + '/channels';
+const listingsUrl = baseUrl + '/listings/';
+const recordingsUrl = baseUrl + '/networkdvrrecordings/';
+const authorizationUrl = baseUrl + '/authorization/';
+
 const mqttUrl = 'wss://obomsg.prod.nl.horizon.tv:443/mqtt';
-const listingsUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web/listings/';
+
 
 let mqttClient = {};
 
@@ -100,7 +105,15 @@ const startMqttClient = async () => {
 	});
 	
 	mqttClient.on('connect', function () {
-		mqttClient.publish(mqttUsername + '/' + varClientId + '/status', '{"source":"' + varClientId + '","state":"ONLINE_RUNNING","deviceType":"HGO"}');
+		
+		topic = mqttUsername + '/' + varClientId + '/status';
+		payload = {
+			"source": varClientId,
+			"state": "ONLINE_RUNNING",
+			"deviceType": "HGO"
+        };
+		mqttClient.publish(topic , JSON.stringify(payload));	
+		//mqttClient.publish(mqttUsername + '/' + varClientId + '/status', '{"source":"' + varClientId + '","state":"ONLINE_RUNNING","deviceType":"HGO"}');
 		
 		mqttClient.subscribe(mqttUsername, function (err) {
 			if(err){
@@ -113,17 +126,26 @@ const startMqttClient = async () => {
 			if(err){
 				console.log(err);
 				return false;
-			}
+			}				
 		});
+		
+		mqttClient.subscribe(mqttUsername + '/+/localRecordings', function (err) {
+			if(err){
+				console.log(err);
+				return false;
+			}				
+		});		
 		
 		mqttClient.on('message', function (topic, payload) {
 			let payloadValue = JSON.parse(payload);
 			
+			console.log(payloadValue);
 			if(payloadValue.deviceType){
 				if(payloadValue.deviceType == 'STB'){
 					stbDevicesCount++;
 					setopboxId = payloadValue.source;
 					setopboxState = payloadValue.state;
+					setopboxStatus = payloadValue;
 
 					if(stbDevicesCount == 1){
 						getUiStatus();
@@ -151,10 +173,11 @@ const startMqttClient = async () => {
 					});
 				}
 			}
-			
-			//console.log(payloadValue);
+						
 			if(payloadValue.status){
+				
 				if(payloadValue.status.uiStatus === "mainUI"){
+					//console.log(payloadValue.status.playerState);
 					if(payloadValue.status.playerState.sourceType === "linear"){
 						filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
 						uiStatus = payloadValue;
@@ -164,10 +187,12 @@ const startMqttClient = async () => {
 						crid = payloadValue.status.playerState.source.eventId;
 						listingsPath = listingsUrl + crid + '?byLocationId=' + LocationId;
 						
+						//console.log(payloadValue.status.playerState.source );
 						console.log('Current channel:', filtered[0].title);
 					}
 					else if(payloadValue.status.playerState.sourceType === "replay"){
 						uiStatus = payloadValue;
+						
 					}
 					else if(payloadValue.status.playerState.sourceType === "VOD"){
 						uiStatus = payloadValue;
@@ -176,11 +201,13 @@ const startMqttClient = async () => {
 						uiStatus = payloadValue;
 					}		
 					else if(payloadValue.status.playerState.sourceType === "reviewbuffer"){
+						//pause
 						uiStatus = payloadValue;
 					}						
 				}
 				else if(payloadValue.status.uiStatus === "apps"){
-					
+					currentChannel = payloadValue.status.appsState.appName ;
+					console.log(payloadValue.status.appsState.appName );
 				}				
 				
 			}
@@ -207,19 +234,19 @@ function switchChannel(channel) {
 	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.pushToTV","source":{"clientId":"' + varClientId + '","friendlyDeviceName":"' + config.friendlyDeviceName + '"},"status":{"sourceType":"linear","source":{"channelId":"' + channel + '"},"relativePosition":0,"speed":1}}')
 };
 
-function powerKey() {
-	console.log('Power on/off');
-	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.KeyEvent","source":"' + varClientId + '","status":{"w3cKey":"Power","eventType":"keyDownUp"}}')
-};
-
-function escapeKey() {
-	console.log('Send escape-key');
-	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.KeyEvent","source":"' + varClientId + '","status":{"w3cKey":"Escape","eventType":"keyDownUp"}}')
-};
-
-function pauseKey() {
-	console.log('Send pause-key');
-	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.KeyEvent","source":"' + varClientId + '","status":{"w3cKey":"MediaPause","eventType":"keyDownUp"}}')
+function sendKey(key) {
+	console.log('Send key: ' + key);
+	topic = mqttUsername + '/' + setopboxId;
+	payload = {
+		"id": makeId(8),
+		"type": "CPE.KeyEvent",
+		"source": varClientId,
+		"status": { 
+			"w3cKey": key,
+			"eventType":"keyDownUp"
+		}
+	};
+	mqttClient.publish(topic , JSON.stringify(payload));	
 };
 
 function getUiStatus() {
@@ -264,15 +291,9 @@ getSession()
 				case 'pushChannel':
 					switchChannel(req.body.channel);
 					break;
-				case 'powerKey':
-					powerKey();
-					break;
-				case 'escapeKey':
-					escapeKey();
-					break;
-				case 'pauseKey':
-					pauseKey();
-					break;	
+				case 'sendKey':
+					sendKey(req.body.key);
+					break;						
 				case 'getUiStatus':
 					getUiStatus();
 					break;											
@@ -282,6 +303,11 @@ getSession()
 			}
 			res.json({"Status": "Ok"});
 		});
+
+		server.get("/api/setopboxStatus", (req, res, next) => {
+			res.json(setopboxStatus);
+			console.log('Get setopboxStatus');
+		})	
 
 		server.get("/api/status", (req, res, next) => {
 			if(setopboxState){
@@ -320,5 +346,7 @@ getSession()
 			res.json(uiStatus);
 			console.log('Get uiStatus');
 		})		
+		
+			
 				
 	});

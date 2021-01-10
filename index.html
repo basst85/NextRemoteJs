@@ -19,9 +19,20 @@
 		<p id="stbStatus"></p>
 		<p id="stbCurrentChannel"></p>
 		
-		<button id="Power" onCLick="powerKey()">Power</button>
-		<button id="Escape" onCLick="escapeKey()">Back/Escape</button>
-		<button id="Pause" onCLick="pauseKey()">Pause</button>		
+		<button id="Power" onCLick="sendKey('Power')">Power</button>
+		<button id="Escape" onCLick="sendKey('Escape')">Back/Escape</button>
+		<button id="Pause" onCLick="sendKey('MediaPause')">Pause</button>	
+		<button id="Help" onCLick="sendKey('Help')">Help</button>			
+		<button id="Info" onCLick="sendKey('Info')">Info</button>		
+		<button id="Guide" onCLick="sendKey('Guide')">Guide</button>			
+		<button id="ContextMenu" onCLick="sendKey('ContextMenu')">ContextMenu</button>	
+		<button id="ChannelUp" onCLick="sendKey('ChannelUp')">ChannelUp</button>	
+		<button id="ChannelDown" onCLick="sendKey('ChannelDown')">ChannelDown</button>			
+		<button id="MediaRecord" onCLick="sendKey('MediaRecord')">MediaRecord</button>	
+		<button id="MediaPlayPause" onCLick="sendKey('MediaPlayPause')">MediaPlayPause</button>	
+		<button id="MediaStop" onCLick="sendKey('MediaStop')">MediaStop</button>	
+		<button id="MediaRewind" onCLick="sendKey('MediaRewind')">MediaRewind</button>	
+		<button id="MediaFastForward" onCLick="sendKey('MediaFastForward')">MediaFastForward</button>					
 		<br/>
 		<br/>
 		<b>Click on channelbutton to switch to channel</b>
@@ -62,37 +73,14 @@
 				});
 			};
 			
-			function powerKey(){
-				// Power on/off
-				fetch('/api', {
-					method: 'POST',
-					headers: {'Content-Type': 'application/json; charset=utf-8'},
-					body: JSON.stringify({
-						action: 'powerKey'
-					}),
-					json: true
-				});
-			};	
-			
-			function escapeKey(){
-				// Escape key
-				fetch('/api', {
-					method: 'POST',
-					headers: {'Content-Type': 'application/json; charset=utf-8'},
-					body: JSON.stringify({
-						action: 'escapeKey'
-					}),
-					json: true
-				});
-			};	
-
-			function pauseKey(){
+			function sendKey(key){
 				// Pause key
 				fetch('/api', {
 					method: 'POST',
 					headers: {'Content-Type': 'application/json; charset=utf-8'},
 					body: JSON.stringify({
-						action: 'pauseKey'
+						action: 'sendKey',
+						key: key
 					}),
 					json: true
 				});			
