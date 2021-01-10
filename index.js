@@ -35,6 +35,8 @@ let currentChannel;
 let currentChannelId;
 let filtered;
 let listingsPath;
+let box;
+
 
 const sessionRequestOptions = {
     method: 'POST',
@@ -45,6 +47,14 @@ const sessionRequestOptions = {
     },
     json: true
 };
+
+function getProgramData(url) {
+    return request(url).then(response => {
+        //console.log(response); // Logs the response
+        return response;
+    });
+}
+
 
 const getChannels = request({
     url: channelsUrl,
@@ -186,11 +196,27 @@ const startMqttClient = async () => {
 						LocationId = filtered[0].LocationId;
 						crid = payloadValue.status.playerState.source.eventId;
 						listingsPath = listingsUrl + crid + '?byLocationId=' + LocationId;
+						currentProgram = getProgramData(listingsPath);
+	
+						box = {
+							sourceType : payloadValue.status.playerState.sourceType,
+							stateSource : payloadValue.status.playerState.source,
+							speed : payloadValue.status.playerState.speed,
+							currentChannelId : uiStatus.status.playerState.source.channelId,
+							currentChannel : filtered[0].title,
+							program : getProgramData(listingsPath)
+						}
 						
 						//console.log(payloadValue.status.playerState.source );
 						console.log('Current channel:', filtered[0].title);
 					}
 					else if(payloadValue.status.playerState.sourceType === "replay"){
+						
+						box = {
+							sourceType : payloadValue.status.playerState.sourceType,
+							eventId  : payloadValue.status.playerState.sourceType.eventId,
+							currentChannel : filtered[0].title
+						}						
 						uiStatus = payloadValue;
 						
 					}
@@ -352,21 +378,13 @@ getSession()
 
 		server.get("/api/currentprogram", (req, res, next) => {		
 		
-			request({
-				url: listingsPath,
-				json: true
-			}, function (error, response, body) {
-			  if (!error && response.statusCode == 200) {
-				 currentProgram = body;
-				 res.json(currentProgram);
-			  }
-			});			
+			res.json(currentProgram);			
 			
 			console.log('Get currentprogram');
 		})	
 		
 		server.get("/api/uistatus", (req, res, next) => {
-			res.json(uiStatus);
+			res.json(box);
 			console.log('Get uiStatus');
 		})		
 		
