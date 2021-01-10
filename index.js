@@ -48,10 +48,11 @@ const sessionRequestOptions = {
     json: true
 };
 
-function getProgramData(url) {
-    return request(url).then(response => {
+
+function getCurrentProgram(url) {
+    return request({uri: url } ).then(response => {
         //console.log(response); // Logs the response
-        return response;
+        return JSON.parse(response);
     });
 }
 
@@ -196,7 +197,8 @@ const startMqttClient = async () => {
 						LocationId = filtered[0].LocationId;
 						crid = payloadValue.status.playerState.source.eventId;
 						listingsPath = listingsUrl + crid + '?byLocationId=' + LocationId;
-						currentProgram = getProgramData(listingsPath);
+						currentProgram = getCurrentProgram(listingsPath);
+						//currentProgramTitle = currentProgram.program.title;
 	
 						box = {
 							sourceType : payloadValue.status.playerState.sourceType,
@@ -204,11 +206,11 @@ const startMqttClient = async () => {
 							speed : payloadValue.status.playerState.speed,
 							currentChannelId : uiStatus.status.playerState.source.channelId,
 							currentChannel : filtered[0].title,
-							program : getProgramData(listingsPath)
+							program : getCurrentProgram(listingsPath)
 						}
-						
-						//console.log(payloadValue.status.playerState.source );
+												
 						console.log('Current channel:', filtered[0].title);
+						console.log('Current program:', box.program);						
 					}
 					else if(payloadValue.status.playerState.sourceType === "replay"){
 						
@@ -255,8 +257,8 @@ const startMqttClient = async () => {
 	});
 };
 
-function switchChannel(channel) {
-	console.log('Switch to', channel);
+function switchChannel(channelId) {
+	console.log('Switch to', channelId);
 	topic = mqttUsername + '/' + setopboxId;
 	payload = {
 		"id": makeId(8),
@@ -268,7 +270,7 @@ function switchChannel(channel) {
 		"status": {
 			"sourceType":"linear",
 			"source": {
-				"channelId": channel,				
+				"channelId": channelId,				
 			},
 		"relativePosition":0,
 		"speed":1		
@@ -289,6 +291,28 @@ function sendKey(key) {
 			"eventType":"keyDownUp"
 		}
 	};
+	mqttClient.publish(topic , JSON.stringify(payload));	
+};
+
+function playRecording(recordingId) {
+	console.log('Play Recording', recordingId);
+	topic = mqttUsername + '/' + setopboxId;
+	payload = {
+		"id": makeId(8),
+		"type":"CPE.pushToTV",
+		"source": {
+			"clientId": varClientId,
+			"friendlyDeviceName": config.friendlyDeviceName			
+		},
+		"status": {
+			"sourceType":"nDVR",
+			"source": {
+				"recordingId": recordingId,				
+			},
+		"relativePosition":0,
+		"speed":1		
+		}
+	}	
 	mqttClient.publish(topic , JSON.stringify(payload));	
 };
 
