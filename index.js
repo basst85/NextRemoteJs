@@ -231,7 +231,24 @@ const startMqttClient = async () => {
 
 function switchChannel(channel) {
 	console.log('Switch to', channel);
-	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.pushToTV","source":{"clientId":"' + varClientId + '","friendlyDeviceName":"' + config.friendlyDeviceName + '"},"status":{"sourceType":"linear","source":{"channelId":"' + channel + '"},"relativePosition":0,"speed":1}}')
+	topic = mqttUsername + '/' + setopboxId;
+	payload = {
+		"id": makeId(8),
+		"type":"CPE.pushToTV",
+		"source": {
+			"clientId": varClientId,
+			"friendlyDeviceName": config.friendlyDeviceName			
+		},
+		"status": {
+			"sourceType":"linear",
+			"source": {
+				"channelId": channel,				
+			},
+		"relativePosition":0,
+		"speed":1		
+		}
+	}	
+	mqttClient.publish(topic , JSON.stringify(payload));	
 };
 
 function sendKey(key) {
@@ -251,7 +268,13 @@ function sendKey(key) {
 
 function getUiStatus() {
 	console.log('Get UI status');
-	mqttClient.publish(mqttUsername + '/' + setopboxId, '{"id":"' + makeId(8) + '","type":"CPE.getUiStatus","source":"' + varClientId + '"}')
+	topic = mqttUsername + '/' + setopboxId;
+	payload = {
+		"id": makeId(8),
+		"type":"CPE.getUiStatus",
+		"source": varClientId
+	}
+	mqttClient.publish(topic, JSON.stringify(payload))
 };
 
 function makeId(length) {
