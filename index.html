@@ -48,7 +48,7 @@
 					return response.json();
 				})
 				.then(function(stations) {
-					for (let s = 0; s < 15; s++) {
+					for (let s = 0; s < stations.length; s++) {
 						let stationBtn = document.createElement('button');
 						stationBtn.setAttribute('style', 'width: 100px; height: 100px; padding: 5px; background: url(' + stations[s].images[3].url + ') no-repeat; background-size: 100%;');
 						stationBtn.id = stations[s].serviceId;

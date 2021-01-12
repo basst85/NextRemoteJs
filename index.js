@@ -47,7 +47,6 @@ request({
 	if (response.status === 200) {
 		program = response.data;
 		
-
 		return (program);
 		};
 	})	
@@ -210,7 +209,7 @@ const startMqttClient = async () => {
 						LocationId = sessionJson.LocationId;
 						crid = payloadValue.status.playerState.source.eventId;
 						listingsPath = listingsUrl + crid + '?byLocationId=' + LocationId;
-						//console.log(request.get(listingsPath).then(json => { return json.data;} ));
+						console.log(getCurrentProgram(listingsPath));
 								
 						//currentProgramTitle = currentProgram.program.title;
 	
