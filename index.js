@@ -1,5 +1,5 @@
 const mqtt = require('mqtt');
-const request = require('request-promise');
+const request = require('axios');
 const _ = require('underscore');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -38,43 +38,74 @@ let listingsPath;
 let box;
 
 
+function getCurrentProgram(url) {
+request({	
+	method: 'GET',
+    url: url,
+    json: true
+}).then((response) => {
+	if (response.status === 200) {
+		program = response.data;
+		
+
+		return (program);
+		};
+	})	
+	
+};
+
+
+
+const getChannels = request({
+	method: 'GET',
+    url: channelsUrl,
+    json: true
+}).then((response) => {
+	if (response.status === 200) {
+		channels = response.data.channels;
+		channels.forEach(function (c) {
+			c.stationSchedules.forEach(function (s) {
+				stations.push(s.station);
+			});
+		});
+	}	
+	
+});
+
+const getListings = request({
+	method: 'GET',
+    url: listingsUrl + '?byLocationId=65535',
+    json: true
+}).then((response) => {
+	if (response.status === 200) {
+		console.log(response.data);
+		/*
+		channels = response.data.channels;
+		channels.forEach(function (c) {
+			c.stationSchedules.forEach(function (s) {
+				stations.push(s.station);
+			});
+		});
+		*/
+	}	
+	
+});
+
 const sessionRequestOptions = {
     method: 'POST',
-    uri: sessionUrl,
-    body: {
+    url: sessionUrl,
+    data: {
 		username: ziggoUsername,
 		password: ziggoPassword
     },
     json: true
 };
 
-
-function getCurrentProgram(url) {
-    return request({uri: url } ).then(response => {
-        //console.log(response); // Logs the response
-        return JSON.parse(response);
-    });
-}
-
-
-const getChannels = request({
-    url: channelsUrl,
-    json: true
-}, function (error, response, body) {
-	if (!error && response.statusCode === 200) {
-		channels = body.channels;
-		channels.forEach(function (c) {
-			c.stationSchedules.forEach(function (s) {
-				stations.push(s.station);
-			});
-		});
-	}
-});
-
 const getSession = async () => {
 	await request(sessionRequestOptions)
 		.then(json => {
-			sessionJson = json;
+			sessionJson = json.data;
+			//console.log(sessionJson);
 		})
 		.catch(function (err) {
 			console.log('getSession: ', err.message);
@@ -87,7 +118,7 @@ const getSession = async () => {
 const getJwtToken = async (oespToken, householdId) => {
 	const jwtRequestOptions = {
 		method: 'GET',
-		uri: jwtUrl,
+		url: jwtUrl,
 		headers: {
 			'X-OESP-Token': oespToken,
 			'X-OESP-Username': ziggoUsername
@@ -97,7 +128,7 @@ const getJwtToken = async (oespToken, householdId) => {
 	
 	await request(jwtRequestOptions)
 		.then(json => {
-			jwtJson = json;
+			jwtJson = json.data;
 		})
 		.catch(function (err) {
 			console.log('getJwtToken: ', err.message);
@@ -194,10 +225,11 @@ const startMqttClient = async () => {
 						uiStatus = payloadValue;
 						currentChannelId = uiStatus.status.playerState.source.channelId;
 						currentChannel = filtered[0].title;
-						LocationId = filtered[0].LocationId;
+						LocationId = sessionJson.LocationId;
 						crid = payloadValue.status.playerState.source.eventId;
 						listingsPath = listingsUrl + crid + '?byLocationId=' + LocationId;
-						currentProgram = getCurrentProgram(listingsPath);
+						//console.log(request.get(listingsPath).then(json => { return json.data;} ));
+								
 						//currentProgramTitle = currentProgram.program.title;
 	
 						box = {
@@ -205,12 +237,12 @@ const startMqttClient = async () => {
 							stateSource : payloadValue.status.playerState.source,
 							speed : payloadValue.status.playerState.speed,
 							currentChannelId : uiStatus.status.playerState.source.channelId,
-							currentChannel : filtered[0].title,
-							program : getCurrentProgram(listingsPath)
+							//currentChannel : filtered[0].title,
+							//program : getCurrentProgram(listingsPath)
 						}
 												
 						console.log('Current channel:', filtered[0].title);
-						console.log('Current program:', box.program);						
+						//console.log('Current program:', box.program);						
 					}
 					else if(payloadValue.status.playerState.sourceType === "replay"){
 						
