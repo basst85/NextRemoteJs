@@ -50,7 +50,23 @@
 				.then(function(stations) {
 					for (let s = 0; s < stations.length; s++) {
 						let stationBtn = document.createElement('button');
-						stationBtn.setAttribute('style', 'width: 100px; height: 100px; padding: 5px; background: url(' + stations[s].images[3].url + ') no-repeat; background-size: 100%;');
+						let streamImage = "";
+                		let channelImage = "";
+						for (image in stations[s].images){
+							img = stations[s].images[image];
+							console.log(img);
+							if (img["assetType"] == "imageStream"){
+								streamImage = img["url"]
+							}
+							if (img["assetType"] == "station-logo-large") {
+								channelImage =  img["url"]
+							}
+						}	
+
+						
+						stationBtn.setAttribute('style', 'width: 100px; height: 100px; padding: 5px; background: url(' + channelImage + ') no-repeat; background-size: 100%;');
+						stationBtn.setAttribute("alt", stations[s].title);
+						stationBtn.setAttribute("title", stations[s].title);
 						stationBtn.id = stations[s].serviceId;
 						document.getElementById('stationsList').appendChild(stationBtn); 
 					}
