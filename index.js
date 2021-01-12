@@ -72,24 +72,6 @@ const getChannels = request({
 	
 });
 
-const getListings = request({
-	method: 'GET',
-    url: listingsUrl + '?byLocationId=65535',
-    json: true
-}).then((response) => {
-	if (response.status === 200) {
-		console.log(response.data);
-		/*
-		channels = response.data.channels;
-		channels.forEach(function (c) {
-			c.stationSchedules.forEach(function (s) {
-				stations.push(s.station);
-			});
-		});
-		*/
-	}	
-	
-});
 
 const sessionRequestOptions = {
     method: 'POST',
@@ -443,7 +425,11 @@ getSession()
 			res.json(box);
 			console.log('Get uiStatus');
 		})		
-		
+	
+		server.get("/api/session", (req, res, next) => {
+			res.json(sessionJson);
+			console.log('Get session');
+		})			
 			
 				
 	});
