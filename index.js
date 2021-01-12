@@ -38,15 +38,18 @@ let listingsPath;
 let box;
 
 
-function getCurrentProgram(url) {
+function getCurrentProgram(url,LocationId) {
 request({	
-	method: 'GET',
-    url: url,
+	method: 'POST',
+	url: url,
+    data: {
+		byLocationId: LocationId
+    },	
     json: true
 }).then((response) => {
 	if (response.status === 200) {
 		program = response.data;
-		
+		console.log(program);
 		return (program);
 		};
 	})	
@@ -96,10 +99,11 @@ const getSession = async () => {
 		return sessionJson;
 };
 
-const getJwtToken = async (oespToken, householdId) => {
-	const jwtRequestOptions = {
+
+const getApiCall = async (url,oespToken, householdId) => {
+	const RequestOptions = {
 		method: 'GET',
-		url: jwtUrl,
+		url: url,
 		headers: {
 			'X-OESP-Token': oespToken,
 			'X-OESP-Username': ziggoUsername
@@ -107,17 +111,26 @@ const getJwtToken = async (oespToken, householdId) => {
 		json: true
 	};
 	
-	await request(jwtRequestOptions)
+	await request(RequestOptions)
 		.then(json => {
-			jwtJson = json.data;
+			if (json.status === 200) {
+				apiJson = json.data;				
+			}
+			else if (json.status === 403) {
+				//retry		
+			}
+			else{
+				//failed
+			}
 		})
 		.catch(function (err) {
-			console.log('getJwtToken: ', err.message);
+			console.log('getApiCall: ', err.message);
 			return false;
 		});
 		
-		return jwtJson;
+		return apiJson;
 };
+
 
 const startMqttClient = async () => {
 	mqttClient = mqtt.connect(mqttUrl, {
@@ -208,8 +221,8 @@ const startMqttClient = async () => {
 						currentChannel = filtered[0].title;
 						LocationId = sessionJson.LocationId;
 						crid = payloadValue.status.playerState.source.eventId;
-						listingsPath = listingsUrl + crid + '?byLocationId=' + LocationId;
-						console.log(getCurrentProgram(listingsPath));
+						listingsPath = listingsUrl + crid ;
+						console.log(getCurrentProgram(listingsPath,LocationId));
 								
 						//currentProgramTitle = currentProgram.program.title;
 	
@@ -351,8 +364,10 @@ function makeId(length) {
 };
 
 getSession()
-    .then(async sessionJson => {
-		const jwtTokenJson = await getJwtToken(sessionJson.oespToken, sessionJson.customer.householdId);
+    .then(async sessionJson => {		
+		const jwtTokenJson = await getApiCall(jwtUrl,sessionJson.oespToken, sessionJson.customer.householdId);
+		const Recordings = await getApiCall(recordingsUrl,sessionJson.oespToken, sessionJson.customer.householdId);
+		//console.log(Recordings);
 
 		mqttUsername = sessionJson.customer.householdId;
 		mqttPassword = jwtTokenJson.token;	
@@ -409,7 +424,7 @@ getSession()
 		});
 
 		server.get("/api/currentchannel", (req, res, next) => {
-			res.json(filtered);
+			res.json(currentChannel);
 			console.log('Get Current Channel');
 		});	
 
