@@ -38,23 +38,6 @@ let listingsPath;
 let box;
 
 
-function getCurrentProgram(url,LocationId) {
-request({	
-	method: 'POST',
-	url: url,
-    data: {
-		byLocationId: LocationId
-    },	
-    json: true
-}).then((response) => {
-	if (response.status === 200) {
-		program = response.data;
-		console.log(program);
-		return (program);
-		};
-	})	
-	
-};
 
 
 
@@ -222,7 +205,7 @@ const startMqttClient = async () => {
 						LocationId = sessionJson.LocationId;
 						crid = payloadValue.status.playerState.source.eventId;
 						listingsPath = listingsUrl + crid ;
-						console.log(getCurrentProgram(listingsPath,LocationId));
+						getCurrentProgram(listingsPath,LocationId);
 								
 						//currentProgramTitle = currentProgram.program.title;
 	
@@ -362,6 +345,25 @@ function makeId(length) {
 	}
 	return result;
 };
+
+function getCurrentProgram(url,LocationId) {
+	request({	
+		method: 'GET',
+		url: url,
+		param: {
+			byLocationId: LocationId
+		},	
+		json: true
+	}).then((response) => {
+		if (response.status === 200) {
+			currentProgram = response.data;
+			//console.log(program);
+			return (currentProgram);
+			};
+		})	
+		
+	};
+	
 
 getSession()
     .then(async sessionJson => {		
