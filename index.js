@@ -14,6 +14,7 @@ const channelsUrl = baseUrl + '/channels';
 const listingsUrl = baseUrl + '/listings/';
 const recordingsUrl = baseUrl + '/networkdvrrecordings/';
 const authorizationUrl = baseUrl + '/authorization/';
+const profileUrl = baseUrl + '/settopboxes/profile';
 
 const mqttUrl = 'wss://obomsg.prod.nl.horizon.tv:443/mqtt';
 
@@ -100,7 +101,7 @@ const getApiCall = async (url,oespToken, householdId) => {
 				apiJson = json.data;				
 			}
 			else if (json.status === 403) {
-				//retry		
+				//Api call resultcode was 403. Refreshing token en trying again...		
 			}
 			else{
 				//failed
@@ -207,19 +208,17 @@ const startMqttClient = async () => {
 						listingsPath = listingsUrl + crid ;
 						getCurrentProgram(listingsPath,LocationId);
 								
-						//currentProgramTitle = currentProgram.program.title;
-	
+		
 						box = {
 							sourceType : payloadValue.status.playerState.sourceType,
 							stateSource : payloadValue.status.playerState.source,
 							speed : payloadValue.status.playerState.speed,
 							currentChannelId : uiStatus.status.playerState.source.channelId,
-							//currentChannel : filtered[0].title,
-							//program : getCurrentProgram(listingsPath)
+	
 						}
 												
 						console.log('Current channel:', filtered[0].title);
-						//console.log('Current program:', box.program);						
+								
 					}
 					else if(payloadValue.status.playerState.sourceType === "replay"){
 						
@@ -357,7 +356,7 @@ function getCurrentProgram(url,LocationId) {
 	}).then((response) => {
 		if (response.status === 200) {
 			currentProgram = response.data;
-			//console.log(program);
+
 			return (currentProgram);
 			};
 		})	
@@ -368,7 +367,7 @@ function getCurrentProgram(url,LocationId) {
 getSession()
     .then(async sessionJson => {		
 		const jwtTokenJson = await getApiCall(jwtUrl,sessionJson.oespToken, sessionJson.customer.householdId);
-		const Recordings = await getApiCall(recordingsUrl,sessionJson.oespToken, sessionJson.customer.householdId);
+		const Recordings = await getApiCall(profileUrl,sessionJson.oespToken, sessionJson.customer.householdId);
 		//console.log(Recordings);
 
 		mqttUsername = sessionJson.customer.householdId;
@@ -410,7 +409,7 @@ getSession()
 		server.get("/api/setopboxStatus", (req, res, next) => {
 			res.json(setopboxStatus);
 			console.log('Get setopboxStatus');
-		})	
+		});	
 
 		server.get("/api/status", (req, res, next) => {
 			if(setopboxState){
@@ -427,25 +426,29 @@ getSession()
 
 		server.get("/api/currentchannel", (req, res, next) => {
 			res.json(currentChannel);
-			console.log('Get Current Channel');
+			console.log('Get current channel');
 		});	
 
 		server.get("/api/currentprogram", (req, res, next) => {		
-		
-			res.json(currentProgram);			
-			
-			console.log('Get currentprogram');
-		})	
+			if(currentProgram){
+				res.json(currentProgram);			
+			}			
+			console.log('Get current program');
+		});	
 		
 		server.get("/api/uistatus", (req, res, next) => {
 			res.json(box);
 			console.log('Get uiStatus');
-		})		
+		});		
 	
 		server.get("/api/session", (req, res, next) => {
 			res.json(sessionJson);
 			console.log('Get session');
-		})			
+		});			
 			
+		server.get("/api/recordings", (req, res, next) => {
+			res.json(Recordings);
+			console.log('Get recordings');
+		});			
 				
 	});
