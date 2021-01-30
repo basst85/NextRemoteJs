@@ -1,0 +1,6 @@
+{
+	"ziggoUsername" : "",
+	"ziggoPassword" : "", 
+	"webPort" : 8080,
+	"friendlyDeviceName" : "NodeJS"
+}

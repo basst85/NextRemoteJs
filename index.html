@@ -8,18 +8,46 @@
 		<h1>Next remote</h1>
 		<br/>
 		<br/>
+		<div id="urls"> 
+			<a href="api/status">status</a>
+			<a href="api/uistatus">uistatus</a>
+			<a href="api/stations">stations</a>
+			<a href="api/currentchannel">currentchannel</a>
+			<a href="api/currentprogram">currentprogram</a>
+			<a href="api/session">session</a>
+			<a href="api/recordings">recordings</a>
+		</div>		
+		<br/>		
 		<p id="stbStatus"></p>
 		<p id="stbCurrentChannel"></p>
-		
-		<button id="Power" onCLick="powerKey()">Power</button>
-		<button id="Escape" onCLick="escapeKey()">Back/Escape</button>
-		<button id="Pause" onCLick="pauseKey()">Pause</button>		
+
+		<button id="MediaTopMenu" onCLick="sendKey('MediaTopMenu')">MediaTopMenu</button>	
+		<button id="ArrowUp" onCLick="sendKey('ArrowUp')">ArrowUp</button>				
+		<button id="ArrowDown" onCLick="sendKey('ArrowDown')">ArrowDown</button>
+		<button id="ArrowLeft" onCLick="sendKey('ArrowLeft')">ArrowLeft</button>
+		<button id="ArrowRight" onCLick="sendKey('ArrowRight')">ArrowRight</button>
+		<button id="Enter" onCLick="sendKey('Enter')">Enter</button>
+		<button id="TV" onCLick="sendKey('TV')">TV</button>		
+		<button id="Power" onCLick="sendKey('Power')">Power</button>
+		<button id="Escape" onCLick="sendKey('Escape')">Back/Escape</button>
+		<button id="Pause" onCLick="sendKey('MediaPause')">Pause</button>	
+		<button id="Help" onCLick="sendKey('Help')">Help</button>			
+		<button id="Info" onCLick="sendKey('Info')">Info</button>		
+		<button id="Guide" onCLick="sendKey('Guide')">Guide</button>			
+		<button id="ContextMenu" onCLick="sendKey('ContextMenu')">ContextMenu</button>	
+		<button id="ChannelUp" onCLick="sendKey('ChannelUp')">ChannelUp</button>	
+		<button id="ChannelDown" onCLick="sendKey('ChannelDown')">ChannelDown</button>			
+		<button id="MediaRecord" onCLick="sendKey('MediaRecord')">MediaRecord</button>	
+		<button id="MediaPlayPause" onCLick="sendKey('MediaPlayPause')">MediaPlayPause</button>	
+		<button id="MediaStop" onCLick="sendKey('MediaStop')">MediaStop</button>	
+		<button id="MediaRewind" onCLick="sendKey('MediaRewind')">MediaRewind</button>	
+		<button id="MediaFastForward" onCLick="sendKey('MediaFastForward')">MediaFastForward</button>					
 		<br/>
 		<br/>
-		<b>Click on channelbutton to switch to channel</b>
+		<b>Click on channel button to switch to channel</b>
 		<br/>
 		<div id="stationsList" />
-		
+
 		<script>
 			// Get channels
 			fetch('/api/stations')
@@ -27,9 +55,25 @@
 					return response.json();
 				})
 				.then(function(stations) {
-					for (let s = 0; s < 15; s++) {
+					for (let s = 0; s < stations.length; s++) {
 						let stationBtn = document.createElement('button');
-						stationBtn.setAttribute('style', 'width: 100px; height: 100px; padding: 5px; background: url(' + stations[s].images[3].url + ') no-repeat; background-size: 100%;');
+						let streamImage = "";
+                		let channelImage = "";
+						for (image in stations[s].images){
+							img = stations[s].images[image];
+							//console.log(img);
+							if (img["assetType"] == "imageStream"){
+								streamImage = img["url"]
+							}
+							if (img["assetType"] == "station-logo-large") {
+								channelImage =  img["url"]
+							}
+						}	
+
+						
+						stationBtn.setAttribute('style', 'width: 100px; height: 100px; padding: 5px; background: url(' + channelImage + ') no-repeat; background-size: 100%;');
+						stationBtn.setAttribute("alt", stations[s].title);
+						stationBtn.setAttribute("title", stations[s].title);
 						stationBtn.id = stations[s].serviceId;
 						document.getElementById('stationsList').appendChild(stationBtn); 
 					}
@@ -54,37 +98,14 @@
 				});
 			};
 			
-			function powerKey(){
-				// Power on/off
-				fetch('/api', {
-					method: 'POST',
-					headers: {'Content-Type': 'application/json; charset=utf-8'},
-					body: JSON.stringify({
-						action: 'powerKey'
-					}),
-					json: true
-				});
-			};	
-			
-			function escapeKey(){
-				// Escape key
-				fetch('/api', {
-					method: 'POST',
-					headers: {'Content-Type': 'application/json; charset=utf-8'},
-					body: JSON.stringify({
-						action: 'escapeKey'
-					}),
-					json: true
-				});
-			};	
-
-			function pauseKey(){
+			function sendKey(key){
 				// Pause key
 				fetch('/api', {
 					method: 'POST',
 					headers: {'Content-Type': 'application/json; charset=utf-8'},
 					body: JSON.stringify({
-						action: 'pauseKey'
+						action: 'sendKey',
+						key: key
 					}),
 					json: true
 				});			

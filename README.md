@@ -11,7 +11,10 @@ $ git clone https://github.com/basst85/NextRemoteJs.git
 ```shell
 $ npm install
 ```
-- Set Ziggo username and password in index.js
+Edit config.json
+- Set Ziggo username and password 
+- Optionally set web port and friendlyname
+
 - Execute script:
 ```shell
 $ npm start
