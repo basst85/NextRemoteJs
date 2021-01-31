@@ -1,3 +1,4 @@
+const logger = require('./lib/logger');
 const mqtt = require('mqtt');
 const request = require('axios');
 const _ = require('underscore');
@@ -36,10 +37,6 @@ let currentChannel;
 let currentChannelId;
 let filtered;
 let listingsPath;
-let box;
-
-
-
 
 
 const getChannels = request({
@@ -73,10 +70,9 @@ const getSession = async () => {
 	await request(sessionRequestOptions)
 		.then(json => {
 			sessionJson = json.data;
-			//console.log(sessionJson);
 		})
 		.catch(function (err) {
-			console.log('getSession: ', err.message);
+			logger.error(`getSession: ${err.message}`);
 			return false;
 		});
 		
@@ -108,7 +104,7 @@ const getApiCall = async (url,oespToken, householdId) => {
 			}
 		})
 		.catch(function (err) {
-			console.log('getApiCall: ', err.message);
+			logger.error(`getApiCall: ${err.message}`);
 			return false;
 		});
 		
@@ -125,6 +121,7 @@ const startMqttClient = async () => {
 	});
 	
 	mqttClient.on('connect', function () {
+		logger.info('Connected to Ziggo MQTT server');
 		
 		topic = mqttUsername + '/' + varClientId + '/status';
 		payload = {
@@ -133,33 +130,68 @@ const startMqttClient = async () => {
 			"deviceType": "HGO"
         };
 		mqttClient.publish(topic , JSON.stringify(payload));	
-		//mqttClient.publish(mqttUsername + '/' + varClientId + '/status', '{"source":"' + varClientId + '","state":"ONLINE_RUNNING","deviceType":"HGO"}');
 		
 		mqttClient.subscribe(mqttUsername, function (err) {
 			if(err){
-				console.log(err);
+				logger.error(`Not connected to MQTT server!: ${err}`);
 				return false;
 			}
+		});
+
+		mqttClient.subscribe(mqttUsername + '/personalizationService', function (err) {
+			if(err){
+				logger.error(`Cannot subscribe to topic!: ${err}`);				
+				return false;
+			}				
+		});
+
+		mqttClient.subscribe(mqttUsername + '/recordingStatus', function (err) {
+			if(err){
+				logger.error(`Cannot subscribe to topic!: ${err}`);		
+				return false;
+			}				
+		});
+
+		mqttClient.subscribe(mqttUsername + '/recordingStatus/lastUserAction', function (err) {
+			if(err){
+				logger.error(`Cannot subscribe to topic!: ${err}`);		
+				return false;
+			}				
 		});
 		
 		mqttClient.subscribe(mqttUsername + '/+/status', function (err) {
 			if(err){
-				console.log(err);
+				logger.error(`Cannot subscribe to topic!: ${err}`);		
 				return false;
 			}				
 		});
 		
 		mqttClient.subscribe(mqttUsername + '/+/localRecordings', function (err) {
 			if(err){
-				console.log(err);
+				logger.error(`Cannot subscribe to topic!: ${err}`);		
 				return false;
 			}				
 		});		
+	
+		mqttClient.subscribe(mqttUsername + '/+/localRecordings/capacity', function (err) {
+			if(err){
+				logger.error(`Cannot subscribe to topic!: ${err}`);		
+				return false;
+			}				
+		});	
+		
+		mqttClient.subscribe(mqttUsername + '/watchlistService', function (err) {
+			if(err){
+				logger.error(`Cannot subscribe to topic!: ${err}`);		
+				return false;
+			}				
+		});	
 		
 		mqttClient.on('message', function (topic, payload) {
 			let payloadValue = JSON.parse(payload);
 			
-			console.log(payloadValue);
+			logger.debug(`topic: '${topic}', payload: '${payload}`);
+			
 			if(payloadValue.deviceType){
 				if(payloadValue.deviceType == 'STB'){
 					stbDevicesCount++;
@@ -173,21 +205,21 @@ const startMqttClient = async () => {
 					
 					mqttClient.subscribe(mqttUsername + '/' + varClientId, function (err) {
 						if(err){
-							console.log(err);
+							logger.error(`Cannot subscribe to topic!: ${err}`);		
 							return false;
 						}
 					});
 					
 					mqttClient.subscribe(mqttUsername + '/' + setopboxId, function (err) {
 						if(err){
-							console.log(err);
+							logger.error(`Cannot subscribe to topic!: ${err}`);		
 							return false;
 						}
 					});
 					
 					mqttClient.subscribe(mqttUsername + '/'+ setopboxId +'/status', function (err) {
 						if(err){
-							console.log(err);
+							logger.error(`Cannot subscribe to topic!: ${err}`);		
 							return false;
 						}
 					});
@@ -197,7 +229,7 @@ const startMqttClient = async () => {
 			if(payloadValue.status){
 				
 				if(payloadValue.status.uiStatus === "mainUI"){
-					//console.log(payloadValue.status.playerState);
+
 					if(payloadValue.status.playerState.sourceType === "linear"){
 						filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
 						uiStatus = payloadValue;
@@ -207,26 +239,12 @@ const startMqttClient = async () => {
 						crid = payloadValue.status.playerState.source.eventId;
 						listingsPath = listingsUrl + crid ;
 						getCurrentProgram(listingsPath,LocationId);
-								
-		
-						box = {
-							sourceType : payloadValue.status.playerState.sourceType,
-							stateSource : payloadValue.status.playerState.source,
-							speed : payloadValue.status.playerState.speed,
-							currentChannelId : uiStatus.status.playerState.source.channelId,
-	
-						}
-												
-						console.log('Current channel:', filtered[0].title);
+																						
+						//console.log('Current channel:', filtered[0].title);
 								
 					}
 					else if(payloadValue.status.playerState.sourceType === "replay"){
-						
-						box = {
-							sourceType : payloadValue.status.playerState.sourceType,
-							eventId  : payloadValue.status.playerState.sourceType.eventId,
-							currentChannel : filtered[0].title
-						}						
+											
 						uiStatus = payloadValue;
 						
 					}
@@ -243,7 +261,7 @@ const startMqttClient = async () => {
 				}
 				else if(payloadValue.status.uiStatus === "apps"){
 					currentChannel = payloadValue.status.appsState.appName ;
-					console.log(payloadValue.status.appsState.appName );
+					//console.log(payloadValue.status.appsState.appName );
 				}				
 				
 			}
@@ -252,13 +270,13 @@ const startMqttClient = async () => {
 		});
 		
 		mqttClient.on('error', function(err) {
-			console.log(err);
+			logger.error(`Not connected to MQTT server!: ${err}`);
 			mqttClient.end();
 			return false;
 		});
 
 		mqttClient.on('close', function () {
-			console.log('Connection closed');
+			logger.debug('Connection closed');
 			mqttClient.end();
 			return false;
 		});
@@ -266,7 +284,7 @@ const startMqttClient = async () => {
 };
 
 function switchChannel(channelId) {
-	console.log('Switch to', channelId);
+	logger.debug(`Switch to: ${channelId}`);
 	topic = mqttUsername + '/' + setopboxId;
 	payload = {
 		"id": makeId(8),
@@ -288,7 +306,8 @@ function switchChannel(channelId) {
 };
 
 function sendKey(key) {
-	console.log('Send key: ' + key);
+	logger.debug(`Send key: ${key}`);
+	
 	topic = mqttUsername + '/' + setopboxId;
 	payload = {
 		"id": makeId(8),
@@ -303,7 +322,8 @@ function sendKey(key) {
 };
 
 function playRecording(recordingId) {
-	console.log('Play Recording', recordingId);
+	logger.debug(`Play Recording: ${recordingId}`);
+	
 	topic = mqttUsername + '/' + setopboxId;
 	payload = {
 		"id": makeId(8),
@@ -325,11 +345,12 @@ function playRecording(recordingId) {
 };
 
 function getUiStatus() {
-	console.log('Get UI status');
+	logger.debug(`Get UI status`);
+	
 	topic = mqttUsername + '/' + setopboxId;
 	payload = {
 		"id": makeId(8),
-		"type":"CPE.getUiStatus",
+		"type": "CPE.getUiStatus",
 		"source": varClientId
 	}
 	mqttClient.publish(topic, JSON.stringify(payload))
@@ -367,8 +388,7 @@ function getCurrentProgram(url,LocationId) {
 getSession()
     .then(async sessionJson => {		
 		const jwtTokenJson = await getApiCall(jwtUrl,sessionJson.oespToken, sessionJson.customer.householdId);
-		const Recordings = await getApiCall(profileUrl,sessionJson.oespToken, sessionJson.customer.householdId);
-		//console.log(Recordings);
+		const Recordings = await getApiCall(recordingsUrl,sessionJson.oespToken, sessionJson.customer.householdId);
 
 		mqttUsername = sessionJson.customer.householdId;
 		mqttPassword = jwtTokenJson.token;	
@@ -381,7 +401,7 @@ getSession()
 		})); 
 
 		server.listen(config.webPort, () => {
-			console.log("Server running on port: " + config.webPort);
+			logger.info(`Webserver running on port: ${config.webPort}`);
 		});
 		
 		server.get("/", (req, res, next) => {
@@ -408,7 +428,7 @@ getSession()
 
 		server.get("/api/setopboxStatus", (req, res, next) => {
 			res.json(setopboxStatus);
-			console.log('Get setopboxStatus');
+			logger.debug(`Get setopboxStatus`);
 		});	
 
 		server.get("/api/status", (req, res, next) => {
@@ -421,34 +441,34 @@ getSession()
 		
 		server.get("/api/stations", (req, res, next) => {
 			res.json(stations);
-			console.log('Get stations');
+			logger.debug(`Get stations`);
 		});
 
 		server.get("/api/currentchannel", (req, res, next) => {
 			res.json(currentChannel);
-			console.log('Get current channel');
+			logger.debug(`Get current channel`);
 		});	
 
 		server.get("/api/currentprogram", (req, res, next) => {		
 			if(currentProgram){
 				res.json(currentProgram);			
 			}			
-			console.log('Get current program');
+			logger.debug(`Get current program`);
 		});	
 		
 		server.get("/api/uistatus", (req, res, next) => {
-			res.json(box);
-			console.log('Get uiStatus');
+			res.json(uiStatus);
+			logger.debug(`Get uiStatus`);
 		});		
 	
 		server.get("/api/session", (req, res, next) => {
 			res.json(sessionJson);
-			console.log('Get session');
+			logger.debug(`Get session`);
 		});			
 			
 		server.get("/api/recordings", (req, res, next) => {
 			res.json(Recordings);
-			console.log('Get recordings');
+			logger.debug(`Get recordings`);
 		});			
 				
 	});
