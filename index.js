@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const server = express();
 const varClientId = makeId(30);
 const config = require('./config.json');
+const { time } = require('console');
 
 const baseUrl = 'https://web-api-prod-obo.horizon.tv/oesp/v3/NL/nld/web';
 const sessionUrl = baseUrl + '/session';
@@ -30,6 +31,7 @@ let mqttUsername;
 let mqttPassword;
 let setopboxId;
 let setopboxState;
+let setopboxStatus;
 let stbDevicesCount = 0;
 let stations = [];
 let uiStatus;
@@ -193,14 +195,18 @@ const startMqttClient = async () => {
 			logger.debug(`topic: '${topic}', payload: '${payload}`);
 			
 			if(payloadValue.deviceType){
+                logger.debug("Received Message with deviceType")
 				if(payloadValue.deviceType == 'STB'){
+                    logger.debug("And it is for an STB")
 					stbDevicesCount++;
 					setopboxId = payloadValue.source;
 					setopboxState = payloadValue.state;
+                    logger.debug("State of box:" + setopboxState)
 					setopboxStatus = payloadValue;
 
 					if(stbDevicesCount == 1){
 						getUiStatus();
+                        logger.debug("First STB, so get uistatus")
 					}
 					
 					mqttClient.subscribe(mqttUsername + '/' + varClientId, function (err) {
@@ -227,10 +233,9 @@ const startMqttClient = async () => {
 			}
 						
 			if(payloadValue.status){
-				
 				if(payloadValue.status.uiStatus === "mainUI"){
-
 					if(payloadValue.status.playerState.sourceType === "linear"){
+                        logger.debug("source = 'linear'")
 						filtered = _.where(stations, {serviceId: payloadValue.status.playerState.source.channelId});
 						uiStatus = payloadValue;
 						currentChannelId = uiStatus.status.playerState.source.channelId;
@@ -244,25 +249,30 @@ const startMqttClient = async () => {
 								
 					}
 					else if(payloadValue.status.playerState.sourceType === "replay"){
-											
+                        logger.debug("source = 'replay'")	
 						uiStatus = payloadValue;
 						
 					}
 					else if(payloadValue.status.playerState.sourceType === "VOD"){
+                        logger.debug("source = 'VOD'")	
 						uiStatus = payloadValue;
 					}	
 					else if(payloadValue.status.playerState.sourceType === "nDVR"){
+                        logger.debug("source = 'nDVR'")	
 						uiStatus = payloadValue;
 					}		
 					else if(payloadValue.status.playerState.sourceType === "reviewbuffer"){
+                        logger.debug("source = 'reviewbuffer'")	
 						//pause
 						uiStatus = payloadValue;
 					}						
 				}
 				else if(payloadValue.status.uiStatus === "apps"){
+                    logger.debug("source = 'apps'")	
 					currentChannel = payloadValue.status.appsState.appName ;
 					//console.log(payloadValue.status.appsState.appName );
-				}				
+				}	
+                else logger.debug("Unknown source")			
 				
 			}
 
@@ -320,6 +330,59 @@ function sendKey(key) {
 	};
 	mqttClient.publish(topic , JSON.stringify(payload));	
 };
+
+async function sendAction(action) {
+    switch(action){
+        case 'Radio':
+            sendActionRadio(action);
+            logger.info(`Sent Radio action: ${action}`);
+            break;
+        case 'PowerOn':
+            sendActionPowerOn("ONLINE_RUNNING");
+            logger.info(`Sent power action: ${action}`);
+            break;
+        case 'PowerOff':
+            sendActionPowerOn("ONLINE_STANDBY");
+            logger.info(`Sent power action: ${action}`);
+            break;      
+    }
+	
+};
+function sendActionPowerOn(DesiredState) {
+    if(setopboxState){
+        if (setopboxState != DesiredState) {
+            sendKey("Power");
+            setopboxState = DesiredState;  // Should be set by response from MQTT, just to be sure
+            logger.info("Sent Power command");
+        }
+        else
+            logger.info("Box already in " + DesiredState);
+        
+    }
+}
+
+
+async function sendActionRadio(action) {
+    // bit of a tricky code to set STB into radio mode, last channel used.
+    // It does so by feeding a number of button-presses; fails sometimes, works 90% of the time
+    sendKey("TV")
+    await new Promise(r => setTimeout(r, 900));
+    sendKey("Escape")
+    await new Promise(r => setTimeout(r, 900));
+    sendKey("MediaTopMenu")
+    await new Promise(r => setTimeout(r, 1000));
+    sendKey("ArrowDown")
+	await new Promise(r => setTimeout(r, 1100));
+	sendKey("ArrowDown")
+	await new Promise(r => setTimeout(r, 1100));
+	sendKey("ArrowDown")
+	await new Promise(r => setTimeout(r, 1100));
+	sendKey("ArrowDown")
+	await new Promise(r => setTimeout(r, 1100));
+	sendKey("Enter")
+	await new Promise(r => setTimeout(r, 1100));
+	sendKey("Enter")
+}
 
 function playRecording(recordingId) {
 	logger.debug(`Play Recording: ${recordingId}`);
@@ -416,15 +479,37 @@ getSession()
 				case 'sendKey':
 					sendKey(req.body.key);
 					break;						
+				case 'sendAction':
+					sendAction(req.body.theAction);
+					break;						
 				case 'getUiStatus':
 					getUiStatus();
 					break;											
 				default:
 					res.json({"Status": "Error"});
+                    return;
 					break;
 			}
 			res.json({"Status": "Ok"});
 		});
+
+		server.post("/api/disconnect", (req, res, next) => {
+			logger.debug('MQTT Connection closing');
+			mqttClient.end();
+			res.json({"Status": "Ok"});
+		});
+
+		server.post("/api/reconnect", (req, res, next) => {
+			logger.debug('MQTT Reconnecting');
+			startMqttClient();
+			res.json({"Status": "Ok"});
+		});
+
+		server.get("/api/mqtt", (req, res, next) => {
+			res.json({ "username": mqttUsername, "password": mqttPassword });
+			logger.debug(`Get MQTT credentials`);
+		});	
+
 
 		server.get("/api/setopboxStatus", (req, res, next) => {
 			res.json(setopboxStatus);
